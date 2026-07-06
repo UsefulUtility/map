@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CS2 Util Helper | Professional</title>
+    
+    <!-- Leaflet Basis -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- Leaflet MarkerCluster (NEU für das Auffächern) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
+    <style>
+        :root {
+            --cfg-blue: #003366; --smoke: #8e8e8e; --molly: #e74c3c; --flash: #f1c40f; --he: #556b2f; --bg: #0f0f0f;
+        }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
+        header { background: var(--cfg-blue); height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 1001; position: relative; }
+        
+        /* Menü */
+        #homeView { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100% - 60px); background: var(--bg); z-index: 1000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
+        .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
+        .map-card { background: #1a1a1a; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid #333; transition: 0.3s; position: relative;}
+        .map-card img { width: 100%; height: 120px; object-fit: cover; }
+        
+        /* Map UI */
+        #map { width: 100%; height: calc(100vh - 60px); background: #000; }
+
+        /* MARKER FIX: Kein Flexbox hier! */
+        .util-marker-container { 
+            background: none !important; 
+            border: none !important; 
+        }
+
+        .util-marker-img { 
+            width: 32px !important; 
+            height: 32px !important; 
+            border: 2px solid white; 
+            border-radius: 50%; 
+            background: rgba(0,0,0,0.5); 
+            display: block;
+            box-sizing: border-box;
+        }
+
+        .util-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: orange;
+            color: white;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            font-size: 11px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            z-index: 20;
+        }
+
+        .marker-cluster-custom { background: none !important; border: none !important; }
+
+        /* Admin & Info */
+        #admin-panel { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.9); padding: 15px; border-radius: 10px; border: 1px solid #d9534f; width: 240px; z-index: 2000; }
+        input, select { width: 100%; margin-bottom: 8px; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
+        
+        #info-box {
+            position: fixed; top: 80px; right: 20px;
+            background: #1a1a1a; border: 2px solid var(--cfg-blue); border-radius: 12px;
+            display: none; z-index: 3000; width: 340px; overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+        }
+
+        .info-header { background: var(--cfg-blue); padding: 12px; text-align: center; font-weight: bold; cursor: move; user-select: none; }
+        #pop-img, #pop-img2 { width: 100%; max-height: 250px; object-fit: contain; background: #000; display: block; border-bottom: 1px solid #333; }
+        .btn { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; font-family: sans-serif; }
+        .btn:hover { filter: brightness(1.2); }
+        
+        #export-modal { display:none; position:fixed; top:5%; left:5%; width:90%; height:80%; background:white; color:black; z-index:4000; padding:20px; border-radius:10px; }
+        
+        @keyframes dash { to { stroke-dashoffset: -20; } }
+        .animated-line { animation: dash 1s linear infinite; }
+    </style>
+</head>
+<body>
+
+<header style="display: flex; align-items: center; justify-content: flex-start;">
+    <div id="back-btn" onclick="showHome()" style="display:none; cursor:pointer; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 4px; margin-right: 20px; font-size: 0.9em;">
+        ⬅ Zurück
+    </div>
+    <div onclick="showHome()" style="cursor:pointer; flex-grow: 1;"><b>CS2 UTIL HELPER</b></div>
+    <div id="login-lock" onclick="login()" style="cursor:pointer">🔒</div>
+</header>
+
+<div id="homeView"><div class="map-grid" id="mapGrid"></div></div>
+<div id="map"></div>
+
+<div id="admin-panel" style="display:none;">
+    <h4 style="margin:0; color:#d9534f;">🛠 Admin Mode</h4>
+    <p id="admin-status" style="font-size:0.7em; margin-bottom:10px;">Bereit</p>
+    <select id="tool-type"><option value="smoke">Smoke</option><option value="flash">Flash</option><option value="molly">Molotov</option><option value="he">HE</option></select>
+    <input type="text" id="tool-title" placeholder="Titel">
+    <input type="text" id="tool-setpos" placeholder="Setpos">
+    <input type="text" id="tool-img" placeholder="Bildname (z.B. stairs)">
+    <input type="text" id="tool-img2" placeholder="Bild 2: Ausrichtung (Optional)">
+    <select id="tool-throw">
+        <option>Leftclick throw</option><option>Leftklick jump-throw</option><option>Left- and rightclick throw</option>
+        <option>Left- and rightclick jump-throw</option><option>Left- and rightclick W-jump-throw</option>
+        <option>rightclick throw</option><option>rightclick jump-throw</option>
+        <option>2-step walk throw</option><option>2-step run throw</option><option>Run throw</option>
+    </select>
+    <button onclick="exportJSON()" class="btn" style="background:var(--cfg-blue); color:white;">💾 Export</button>
+    <button onclick="undoLast()" class="btn" style="background:#333; color:white;">↺ Rückgängig</button>
+</div>
+
+<div id="info-box">
+    <div class="info-header" id="pop-title"></div>
+    <img id="pop-img" src="" onerror="handleImageError(this)">
+    <img id="pop-img2" src="" style="display:none; border-top: 1px solid #333;" onerror="this.style.display='none'">
+    <div style="padding:15px;">
+        <div id="pop-label" style="color:var(--flash); font-size:0.8em; text-align:center; margin-bottom:10px;"></div>
+        <button class="btn" style="background:#27ae60; color:white;" onclick="copySetpos()">📋 Setpos kopieren</button>
+        <button class="btn" style="background:#444; color:white;" onclick="closeInfo()">Schließen</button>
+    </div>
+</div>
+
+<div id="export-modal">
+    <h3>In data.json kopieren:</h3>
+    <textarea id="export-area" style="width:100%; height:80%; font-family:monospace;"></textarea><br>
+    <button onclick="document.getElementById('export-modal').style.display='none'" class="btn">Schließen</button>
+</div>
+
+<script>
+    const maps = ["Dust II", "Mirage", "Inferno", "Cache", "Nuke", "Ancient", "Anubis", "Overpass"];
+    const colors = { smoke: '#8e8e8e', molly: '#e74c3c', flash: '#f1c40f', he: '#556b2f' };
+    let isAdmin = false, currentMapName = "", tempStart = null, mapLayer, lineLayer, markerLayer, activeSpotType = "smoke";
+
+    const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomSnap: 0.1, attributionControl: false });
+    lineLayer = L.layerGroup().addTo(map);
+
+    // CLUSTER INITIALISIERUNG
+    markerLayer = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: false,
+        spiderfyOnMaxZoom: true,
+        spiderfyDistanceMultiplier: 2.5, // WEITER RING-EFFEKT
+        maxClusterRadius: 25, 
+        iconCreateFunction: function(cluster) {
+            const markers = cluster.getAllChildMarkers();
+            const count = markers.length;
+            const type = markers[0].options.utilType; 
+            return L.divIcon({
+                className: 'marker-cluster-custom',
+                html: `<div>
+                          <img src="assets/utils/${type}.png" class="util-marker-img">
+                          <div class="util-badge">${count}</div>
+                       </div>`,
+                iconSize: [32, 32],
+                iconAnchor: [16, 16]
+            });
+        }
+    }).addTo(map);
+
+    markerLayer.on('clusterclick', function (a) { a.layer.spiderfy(); });
+
+    // Drag-Logik
+    let active = false, currentX, currentY, initialX, initialY, xOffset = 0, yOffset = 0;
+    function setupDraggable() {
+        const header = document.querySelector(".info-header");
+        header.addEventListener("mousedown", dragStart);
+        document.addEventListener("mouseup", dragEnd);
+        document.addEventListener("mousemove", drag);
+    }
+    function dragStart(e) {
+        initialX = e.clientX - xOffset; initialY = e.clientY - yOffset;
+        if (e.target.classList.contains("info-header")) active = true;
+    }
+    function dragEnd() { active = false; initialX = currentX; initialY = currentY; }
+    function drag(e) {
+        if (active) {
+            e.preventDefault();
+            currentX = e.clientX - initialX; currentY = e.clientY - initialY;
+            xOffset = currentX; yOffset = currentY;
+            document.getElementById("info-box").style.transform = `translate3d(${currentX}px, ${currentY}px, 0)`;
+        }
+    }
+    window.addEventListener('DOMContentLoaded', setupDraggable);
+
+    function buildMenu() {
+        const grid = document.getElementById('mapGrid');
+        grid.innerHTML = "";
+        maps.forEach(m => {
+            const file = m.toLowerCase().replace(/\s+/g, '');
+            grid.innerHTML += `<div class="map-card" onclick="loadMap('${m}')"><img src="assets/icons/${file}.png" onerror="this.src='https://via.placeholder.com/200x100?text=${m}'"><div style="padding:10px;text-align:center;">${m}</div></div>`;
+        });
+    }
+
+    function loadMap(name) {
+        currentMapName = name;
+        const file = name.toLowerCase().replace(/\s+/g, '');
+        const imgUrl = `maps/${file}.png`;
+        document.getElementById('homeView').style.display = 'none';
+        document.getElementById('back-btn').style.display = 'block';
+        if(mapLayer) map.removeLayer(mapLayer);
+        const img = new Image();
+        img.src = imgUrl;
+        img.onload = function() {
+            const h = this.height;
+            const w = this.width;
+            const bounds = [[0, 0], [h, w]];
+            mapLayer = L.imageOverlay(imgUrl, bounds).addTo(map);
+            map.setMaxBounds(bounds); // BILD-GRENZEN FIXIEREN
+            map.fitBounds(bounds);
+            renderSpots();
+        };
+    }
+
+    function showHome() {
+        document.getElementById('homeView').style.display = 'block';
+        document.getElementById('back-btn').style.display = 'none';
+        currentMapName = "";
+        if(lineLayer) lineLayer.clearLayers();
+    }
+    function login() { if(prompt("Code:") === "1210") { isAdmin = true; document.getElementById('admin-panel').style.display = 'block'; } }
+
+    map.on('click', function(e) {
+        if(!isAdmin || !currentMapName) return;
+        const pos = [e.latlng.lat, e.latlng.lng];
+        if(!tempStart) {
+            tempStart = pos;
+            document.getElementById('admin-status').innerText = "Start gesetzt - Ziel wählen!";
+            L.circleMarker(pos, {color: 'white', radius: 5}).addTo(map);
+        } else {
+            const spot = {
+                map: currentMapName, type: document.getElementById('tool-type').value,
+                title: document.getElementById('tool-title').value || "Spot",
+                setpos: document.getElementById('tool-setpos').value,
+                img: document.getElementById('tool-img').value || "",
+                img2: document.getElementById('tool-img2').value || "",
+                label: document.getElementById('tool-throw').value,
+                start: tempStart, end: pos
+            };
+            allSpots.push(spot);
+            tempStart = null;
+            document.getElementById('admin-status').innerText = "Gespeichert!";
+            renderSpots();
+            showInfo(spot);
+        }
+    });
+
+    function renderSpots() {
+        lineLayer.clearLayers(); markerLayer.clearLayers();
+        allSpots.filter(s => s.map === currentMapName).forEach(spot => {
+            const icon = L.divIcon({
+                className: 'util-marker-container',
+                html: `<img src="assets/utils/${spot.type}.png" class="util-marker-img" style="border-color:${colors[spot.type]}">`,
+                iconSize: [32, 32], 
+                iconAnchor: [16, 16] // FIXIERT DEN ANKER IN DER MITTE
+            });
+            const marker = L.marker(spot.start, { icon: icon, utilType: spot.type });
+            marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showInfo(spot); });
+            markerLayer.addLayer(marker);
+        });
+    }
+
+    function showInfo(spot) {
+        activeSpotType = spot.type;
+        lineLayer.clearLayers();
+        L.polyline([spot.start, spot.end], { color: colors[spot.type], weight: 4, dashArray: '10, 10', className: 'animated-line' }).addTo(lineLayer);
+        document.getElementById('pop-title').innerText = spot.title;
+        document.getElementById('pop-label').innerText = spot.label;
+        const popImg1 = document.getElementById('pop-img');
+        const popImg2 = document.getElementById('pop-img2');
+        if(spot.img && spot.img.trim() !== "") {
+            let img1 = spot.img.trim(); if(!img1.toLowerCase().endsWith(".png")) img1 += ".png";
+            popImg1.src = "img/" + img1; popImg1.style.display = "block";
+        } else { handleImageError(popImg1); }
+        if(spot.img2 && spot.img2.trim() !== "") {
+            let img2 = spot.img2.trim(); if(!img2.toLowerCase().endsWith(".png")) img2 += ".png";
+            popImg2.src = "img/" + img2; popImg2.style.display = "block";
+        } else { popImg2.style.display = "none"; }
+        window.activeSetpos = spot.setpos;
+        document.getElementById('info-box').style.display = 'block';
+    }
+
+    function handleImageError(element) {
+        element.src = `assets/utils/${activeSpotType}.png`;
+        element.style.width = "100px"; element.style.margin = "20px auto";
+    }
+
+    function closeInfo() { document.getElementById('info-box').style.display = 'none'; lineLayer.clearLayers(); }
+    function copySetpos() { navigator.clipboard.writeText(window.activeSetpos); alert("Kopiert!"); }
+    function undoLast() { allSpots.pop(); renderSpots(); }
+    function exportJSON() {
+        document.getElementById('export-area').value = JSON.stringify(allSpots, null, 2);
+        document.getElementById('export-modal').style.display = 'block';
+    }
+
+    // DATENBANK (allSpots Array wie gehabt hier einfügen)
+    let allSpots = [{
+        "map": "Cache",
+        "type": "smoke",
+        "title": "A Cross Waterfall",
+        "setpos": "setpos 1315.968750 1587.960815 1768.000000;setang -33.090771 -167.674728 0.000000",
+        "img": "cache_A_cross_waterfall",
+		"img2": "",
+        "label": "Left- and rightclick jump-throw",
+        "start": [1473.6, 1231.4],
+        "end": [1392.1, 721.3]
+      },
+	  {
+        "map": "Cache",
+        "type": "smoke",
+        "title": "A Backsite",
+        "setpos": "setpos 1315.968750 1587.960815 1768.000000;setang -33.090771 -167.674728 0.000000",
+        "img": "cache_A_backsite",
+		"img2": "",
+        "label": "Left- and rightclick W-jump-throw",
+        "start": [1473.6, 1231.4], // Gleicher Startpunkt zum Testen des Clusters!
+        "end": [1437.1, 618.4]
+      },
+	  {
+		"map": "Cache",
+		"type": "flash",
+		"title": "Popflash A",
+		"setpos": "setpos 1315.969482 1052.109375 1700.089722;setang -14.670122 145.052795 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftklick jump-throw",
+		"start": [
+		  1348.1878858951316,
+		  1231.374632876053
+		],
+		"end": [
+		  1520.4368915366704,
+		  924.343227053396
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "molly",
+		"title": "Whitebox Molly",
+		"setpos": "tbd",
+		"img": "whitbox_molly",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  1080.6462977018168,
+		  1200.0924448479473
+		],
+		"end": [
+		  1045.8264707098954,
+		  681.1781245132418
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "smoke",
+		"title": "Heaven Smoke",
+		"setpos": "tbd",
+		"img": "cache_B_heaven",
+		"img2": "cache_B_setup_heaven",
+		"label": "Leftclick throw",
+		"start": [
+		  328.42756976142346,
+		  960.3090224325186
+		],
+		"end": [
+		  616.7621140664138,
+		  538.0101086317285
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "molly",
+		"title": "Molly Close Ecke B Spot",
+		"setpos": "tbd",
+		"img": "",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  324.9840512304732,
+		  981.7444916832444
+		],
+		"end": [
+		  428.9771681171582,
+		  788.5573250610776
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "molly",
+		"title": "Molly Backsite B",
+		"setpos": "tbd",
+		"img": "cache_b_molly_backsite",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  324.45611275131944,
+		  988.75
+		],
+		"end": [
+		  332.13175848925556,
+		  771.2523738467567
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "flash",
+		"title": "Popflash B site",
+		"setpos": "setpos 823.964478 -1449.937378 1712.000000;setang 2.935649 158.569412 0.000000",
+		"img": "cache_B_popflash_site",
+		"img2": "",
+		"label": "Left- and rightclick W-jump-throw",
+		"start": [
+		  322.55525253651,
+		  1054.6250871357124
+		],
+		"end": [
+		  451.550158786264,
+		  801.0088232343492
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "smoke",
+		"title": "B Tree (lower) smoke",
+		"setpos": "tbd",
+		"img": "cache_B_tree_smoke",
+		"img2": "",
+		"label": "Left- and rightclick jump-throw",
+		"start": [
+		  328.7129163963449,
+		  979.75
+		],
+		"end": [
+		  531.9779850084199,
+		  520.6486405963218
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "molly",
+		"title": "Headshot Molly",
+		"setpos": "tbd",
+		"img": "cache_b_headshot",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  326.2233835425378,
+		  1050.5
+		],
+		"end": [
+		  410.7362513310339,
+		  611.8177506628831
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "flash",
+		"title": "Popflash A Main",
+		"setpos": "setpos 1315.968750 1054.244263 1700.648193;setang -14.628532 145.365540 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  1344.2981385076935,
+		  933.2074653154466
+		],
+		"end": [
+		  1485.9220876247678,
+		  924.5894544220322
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "smoke",
+		"title": "Mid Smoke",
+		"setpos": "setpos 1249.132324 558.057495 1672.103149;setang -61.631470 -161.614471 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftklick jump-throw",
+		"start": [
+		  1085.7264489210659,
+		  1201.75
+		],
+		"end": [
+		  875.2508017127528,
+		  608.1118318204308
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "he",
+		"title": "Vent HE",
+		"setpos": "setpos -119.808533 550.952271 1684.614990;setang -14.732475 -44.018330 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  1079.4374026920775,
+		  702.5983228481438
+		],
+		"end": [
+		  849.7592194494969,
+		  941.1591257592947
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "smoke",
+		"title": "CT Spawn Mid Smoke",
+		"setpos": "setpos -1742.968750 303.505035 1678.000000;setang -30.637463 -1.219335 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftklick jump-throw",
+		"start": [
+		  1003.1319610707129,
+		  76.33095362738482
+		],
+		"end": [
+		  973.5756586462802,
+		  1061.2464843033179
+		]
+	  },
+	  {
+		"map": "Cache",
+		"type": "flash",
+		"title": "Popflash in A Main",
+		"setpos": "setpos -448.732483 1437.941528 1752.000000;setang -15.946381 18.768297 0.000000",
+		"img": "",
+		"img2": "",
+		"label": "Leftclick throw",
+		"start": [
+		  1450.1710352402597,
+		  566.3264301386615
+		],
+		"end": [
+		  1549.9235559227204,
+		  935.6697541421364
+		]
+	  }]; // Hier deine Spots einfügen
+
+    buildMenu();
+</script>
+</body>
+</html>
