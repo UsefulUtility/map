@@ -3,113 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CS2 Util Helper | Professional</title>
+    <title>CS2 Util Helper | Elite Edition</title>
     
     <!-- Leaflet Basis -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <!-- Leaflet MarkerCluster (NEU für das Auffächern) -->
+    <!-- Leaflet MarkerCluster -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
 
     <style>
         :root {
-            --cfg-blue: #003366; --smoke: #8e8e8e; --molly: #e74c3c; --flash: #f1c40f; --he: #556b2f; --bg: #0f0f0f;
+            --cfg-blue: #003366; 
+            --cfg-blue-light: #004a94;
+            --smoke: #8e8e8e; --molly: #e74c3c; --flash: #f1c40f; --he: #556b2f; 
+            --bg: #0a0c10;
+            --card-bg: #161b22;
+            --glass: rgba(255, 255, 255, 0.05);
+            --shadow-3d: 0 10px 30px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.1);
         }
-        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
-        header { background: var(--cfg-blue); height: 60px; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; z-index: 1001; position: relative; }
         
-        /* Menü */
-        #homeView { position: absolute; top: 60px; left: 0; width: 100%; height: calc(100% - 60px); background: var(--bg); z-index: 1000; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
-        .map-card { background: #1a1a1a; border-radius: 8px; overflow: hidden; cursor: pointer; border: 2px solid #333; transition: 0.3s; position: relative;}
-        .map-card img { width: 100%; height: 120px; object-fit: cover; }
+        body, html { margin: 0; padding: 0; height: 100%; background: var(--bg); color: #e6edf3; font-family: 'Segoe UI', Roboto, sans-serif; overflow: hidden; }
+        
+        /* High Quality Header */
+        header { 
+            background: linear-gradient(180deg, var(--cfg-blue) 0%, #001a35 100%);
+            height: 65px; display: flex; align-items: center; padding: 0 25px; 
+            z-index: 1001; position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Side Switcher Styles */
+        #side-control {
+            display: none; /* Nur auf Map sichtbar */
+            align-items: center;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 12px;
+            border-radius: 30px;
+            margin-left: auto;
+            margin-right: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .side-img { width: 32px; height: 32px; object-fit: cover; border-radius: 4px; margin-right: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .side-toggle-btn {
+            cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            background: var(--cfg-blue-light); border: none; border-radius: 4px; padding: 2px 6px; color: white;
+            transition: 0.2s; font-size: 10px; line-height: 1;
+        }
+        .side-toggle-btn:hover { background: #0066cc; transform: scale(1.1); }
+        .current-side-label { font-weight: bold; margin-left: 10px; color: var(--flash); min-width: 25px; text-align: center; font-size: 1.1em; }
+
+        /* Menü Karten mit 3D Effekt */
+        #homeView { position: absolute; top: 65px; left: 0; width: 100%; height: calc(100% - 65px); background: radial-gradient(circle at center, #161b22 0%, #0a0c10 100%); z-index: 1000; overflow-y: auto; padding: 40px 20px; box-sizing: border-box; }
+        .map-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; }
+        .map-card { 
+            background: var(--card-bg); border-radius: 12px; overflow: hidden; cursor: pointer; 
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: var(--shadow-3d); position: relative;
+        }
+        .map-card:hover { transform: translateY(-10px) scale(1.02); border-color: var(--cfg-blue-light); box-shadow: 0 20px 40px rgba(0,0,0,0.8); }
+        .map-card img { width: 100%; height: 140px; object-fit: cover; opacity: 0.8; transition: 0.3s; }
+        .map-card:hover img { opacity: 1; }
         
         /* Map UI */
-        #map { width: 100%; height: calc(100vh - 60px); background: #000; }
-
-        /* MARKER FIX: Kein Flexbox hier! */
-        .util-marker-container { 
-            background: none !important; 
-            border: none !important; 
-        }
-
+        #map { width: 100%; height: calc(100vh - 65px); background: #000; }
+        
+        /* Marker mit 3D Glanz */
         .util-marker-img { 
-            width: 32px !important; 
-            height: 32px !important; 
-            border: 2px solid white; 
-            border-radius: 50%; 
-            background: rgba(0,0,0,0.5); 
-            display: block;
-            box-sizing: border-box;
+            width: 42px !important; height: 42px !important; 
+            border: 2px solid white; border-radius: 50%; 
+            background: rgba(0,0,0,0.6); display: block; box-sizing: border-box;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
         }
 
         .util-badge {
-            position: absolute;
-            top: -5px;
-            right: -5px;
-            background: orange;
-            color: white;
-            border-radius: 50%;
-            width: 18px;
-            height: 18px;
-            font-size: 11px;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 1.5px solid white;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-            z-index: 20;
+            position: absolute; top: -5px; right: -5px; background: linear-gradient(135deg, #ff9900 0%, #ff6600 100%);
+            color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; border: 1.5px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.5); z-index: 20;
         }
 
-        .marker-cluster-custom { background: none !important; border: none !important; }
-
-        /* Admin & Info */
-        #admin-panel { position: fixed; bottom: 20px; left: 20px; background: rgba(0,0,0,0.9); padding: 15px; border-radius: 10px; border: 1px solid #d9534f; width: 240px; z-index: 2000; }
-        input, select { width: 100%; margin-bottom: 8px; padding: 8px; background: #222; color: white; border: 1px solid #444; border-radius: 4px; box-sizing: border-box; }
-        
+		#pop-img, #pop-img2 {
+			width: 80% !important;   /* 80% der Breite der Info-Box */
+			height: auto !important;  /* Automatische Höhe passend zum Bild */
+			max-height: none !important; /* Keine Begrenzung der Höhe mehr */
+			object-fit: contain;     /* Zeigt das komplette Bild ohne Beschneidung */
+			display: block;          /* Ermöglicht Zentrierung */
+			margin: 15px auto;       /* Zentriert das Bild mit Abstand oben/unten */
+			border-radius: 8px;      /* Abgerundete Ecken */
+			border: 1px solid rgba(255,255,255,0.1); /* Dezenter 3D-Rahmen */
+			box-shadow: 0 5px 15px rgba(0,0,0,0.5);  /* Schatten für Tiefe */
+		}
+		
+        /* Hochwertige Info-Box */
         #info-box {
-            position: fixed; top: 80px; right: 20px;
-            background: #1a1a1a; border: 2px solid var(--cfg-blue); border-radius: 12px;
-            display: none; z-index: 3000; width: 340px; overflow: hidden;
-            box-shadow: 0 0 30px rgba(0,0,0,0.7);
+            position: fixed; top: 85px; right: 25px; background: rgba(13, 17, 23, 0.95);
+            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 16px; display: none; z-index: 3000; width: 360px; overflow: hidden;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+        }
+        .info-header { 
+            background: linear-gradient(90deg, var(--cfg-blue) 0%, var(--cfg-blue-light) 100%); 
+            padding: 15px; text-align: center; font-weight: bold; cursor: move; border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .pop-label-frame {
+            display: inline-block; padding: 4px 12px; border-radius: 20px;
+            border: 1px solid var(--flash); color: var(--flash);
+            font-size: 0.75em; font-weight: bold; margin: 10px 0;
+            background: rgba(241, 196, 15, 0.1);
+        }
+        .pop-description {
+            padding: 0 15px 15px 15px; font-size: 0.9em; color: #acbac7; line-height: 1.5;
+            text-align: left; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;
+        }
+        
+        .btn { 
+            padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; 
+            width: 100%; margin-top: 8px; transition: 0.2s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.3); position: relative; top: 0;
+        }
+        .btn:active { top: 3px; box-shadow: 0 1px 0 rgba(0,0,0,0.3); }
+
+        #admin-panel { 
+            position: fixed; bottom: 25px; left: 25px; background: rgba(13, 17, 23, 0.9);
+            padding: 20px; border-radius: 16px; border: 1px solid #d9534f; width: 260px; z-index: 2000;
+            box-shadow: var(--shadow-3d); backdrop-filter: blur(5px);
+        }
+        
+        input, select, textarea { 
+            width: 100%; margin-bottom: 10px; padding: 10px; background: #0d1117; 
+            color: white; border: 1px solid #30363d; border-radius: 6px; box-sizing: border-box;
         }
 
-        .info-header { background: var(--cfg-blue); padding: 12px; text-align: center; font-weight: bold; cursor: move; user-select: none; }
-        #pop-img, #pop-img2 { width: 100%; max-height: 350px; object-fit: contain; background: #000; display: block; border-bottom: 1px solid #333; }
-        .btn { padding: 10px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 5px; font-family: sans-serif; }
-        .btn:hover { filter: brightness(1.2); }
-        
-        #export-modal { display:none; position:fixed; top:5%; left:5%; width:90%; height:80%; background:white; color:black; z-index:4000; padding:20px; border-radius:10px; }
-        
         @keyframes dash { to { stroke-dashoffset: -20; } }
         .animated-line { animation: dash 1s linear infinite; }
     </style>
 </head>
 <body>
 
-<header style="display: flex; align-items: center; justify-content: flex-start;">
-    <div id="back-btn" onclick="showHome()" style="display:none; cursor:pointer; background: rgba(255,255,255,0.1); padding: 5px 15px; border-radius: 4px; margin-right: 20px; font-size: 0.9em;">
+<header>
+    <div id="back-btn" onclick="showHome()" style="display:none; cursor:pointer; background: rgba(255,255,255,0.1); padding: 8px 18px; border-radius: 8px; margin-right: 20px; font-size: 0.9em; border: 1px solid rgba(255,255,255,0.1);">
         ⬅ Zurück
     </div>
-    <div onclick="showHome()" style="cursor:pointer; flex-grow: 1;"><b>CS2 UTIL HELPER</b></div>
-    <div id="login-lock" onclick="login()" style="cursor:pointer">🔒</div>
+    
+    <div onclick="showHome()" style="cursor:pointer; flex-grow: 0; margin-right: 20px;"><b>CS2 UTIL HELPER</b></div>
+
+    <!-- Side Switcher -->
+    <div id="side-control">
+        <img src="img/tct.png" class="side-img" alt="Side">
+        <div class="side-toggle-btn" onclick="toggleSide()">
+            <span>▲</span>
+            <span>▼</span>
+        </div>
+        <div class="current-side-label" id="side-label">T</div>
+    </div>
+    
+    <div id="login-lock" onclick="login()" style="cursor:pointer; margin-left: auto;">🔒</div>
 </header>
 
 <div id="homeView"><div class="map-grid" id="mapGrid"></div></div>
 <div id="map"></div>
 
+<!-- Admin Panel -->
 <div id="admin-panel" style="display:none;">
-    <h4 style="margin:0; color:#d9534f;">🛠 Admin Mode</h4>
+    <h4 style="margin:0 0 10px 0; color:#d9534f;">🛠 Admin Mode</h4>
     <p id="admin-status" style="font-size:0.7em; margin-bottom:10px;">Bereit</p>
+    <select id="tool-side"><option value="T">Seite: T</option><option value="CT">Seite: CT</option></select>
     <select id="tool-type"><option value="smoke">Smoke</option><option value="flash">Flash</option><option value="molly">Molotov</option><option value="he">HE</option></select>
     <input type="text" id="tool-title" placeholder="Titel">
     <input type="text" id="tool-setpos" placeholder="Setpos">
-    <input type="text" id="tool-img" placeholder="Bildname (z.B. stairs)">
-    <input type="text" id="tool-img2" placeholder="Bild 2: Ausrichtung (Optional)">
+    <input type="text" id="tool-img" placeholder="Bildname 1">
+    <input type="text" id="tool-img2" placeholder="Bildname 2 (Opt.)">
+    <textarea id="tool-desc" placeholder="Beschreibung..." rows="2"></textarea>
     <select id="tool-throw">
         <option>Leftclick throw</option><option>Leftklick jump-throw</option><option>Left- and rightclick throw</option>
         <option>Left- and rightclick jump-throw</option><option>Left- and rightclick W-jump-throw</option>
@@ -120,50 +189,44 @@
     <button onclick="undoLast()" class="btn" style="background:#333; color:white;">↺ Rückgängig</button>
 </div>
 
+<!-- Info Box -->
 <div id="info-box">
     <div class="info-header" id="pop-title"></div>
     <img id="pop-img" src="" onerror="handleImageError(this)">
-    <img id="pop-img2" src="" style="display:none; border-top: 1px solid #333;" onerror="this.style.display='none'">
-    <div style="padding:15px;">
-        <div id="pop-label" style="color:var(--flash); font-size:0.8em; text-align:center; margin-bottom:10px;"></div>
-        <button class="btn" style="background:#27ae60; color:white;" onclick="copySetpos()">📋 Setpos kopieren</button>
-        <button class="btn" style="background:#444; color:white;" onclick="closeInfo()">Schließen</button>
+    <img id="pop-img2" src="" style="display:none;" onerror="this.style.display='none'">
+    <div style="padding:15px; text-align:center;">
+        <div class="pop-label-frame" id="pop-label"></div>
+        <div id="pop-desc" class="pop-description"></div>
+        <button class="btn" style="background:#238636; color:white;" onclick="copySetpos()">📋 Setpos kopieren</button>
+        <button class="btn" style="background:#30363d; color:white; margin-top:10px;" onclick="closeInfo()">Schließen</button>
     </div>
 </div>
 
-<div id="export-modal">
-    <h3>In data.json kopieren:</h3>
-    <textarea id="export-area" style="width:100%; height:80%; font-family:monospace;"></textarea><br>
-    <button onclick="document.getElementById('export-modal').style.display='none'" class="btn">Schließen</button>
+<div id="export-modal" style="display:none; position:fixed; top:5%; left:5%; width:90%; height:80%; background:#0d1117; color:white; z-index:4000; padding:20px; border-radius:16px; border: 1px solid #30363d;">
+    <h3>In die HTML kopieren:</h3>
+    <textarea id="export-area" style="width:100%; height:80%; font-family:monospace; background:#010409; color:#7ee787; border:none; padding:10px;"></textarea><br>
+    <button onclick="document.getElementById('export-modal').style.display='none'" class="btn" style="background:var(--cfg-blue); width:200px;">Schließen</button>
 </div>
 
 <script>
     const maps = ["Dust II", "Mirage", "Inferno", "Cache", "Nuke", "Ancient", "Anubis", "Overpass"];
     const colors = { smoke: '#8e8e8e', molly: '#e74c3c', flash: '#f1c40f', he: '#556b2f' };
-    let isAdmin = false, currentMapName = "", tempStart = null, mapLayer, lineLayer, markerLayer, activeSpotType = "smoke";
+    
+    let isAdmin = false, currentMapName = "", currentSide = "T", tempStart = null, mapLayer, lineLayer, markerLayer, activeSpotType = "smoke";
 
     const map = L.map('map', { crs: L.CRS.Simple, minZoom: -2, maxZoom: 2, zoomSnap: 0.1, attributionControl: false });
     lineLayer = L.layerGroup().addTo(map);
 
-    // CLUSTER INITIALISIERUNG
     markerLayer = L.markerClusterGroup({
-        showCoverageOnHover: false,
-        zoomToBoundsOnClick: false,
-        spiderfyOnMaxZoom: true,
-        spiderfyDistanceMultiplier: 2.5, // WEITER RING-EFFEKT
-        maxClusterRadius: 25, 
+        showCoverageOnHover: false, zoomToBoundsOnClick: false, spiderfyOnMaxZoom: true,
+        spiderfyDistanceMultiplier: 2.5, maxClusterRadius: 25, 
         iconCreateFunction: function(cluster) {
             const markers = cluster.getAllChildMarkers();
-            const count = markers.length;
             const type = markers[0].options.utilType; 
             return L.divIcon({
                 className: 'marker-cluster-custom',
-                html: `<div>
-                          <img src="assets/utils/${type}.png" class="util-marker-img">
-                          <div class="util-badge">${count}</div>
-                       </div>`,
-                iconSize: [32, 32],
-                iconAnchor: [16, 16]
+                html: `<div><img src="assets/utils/${type}.png" class="util-marker-img"><div class="util-badge">${markers.length}</div></div>`,
+                iconSize: [42, 42], iconAnchor: [21, 21]
             });
         }
     }).addTo(map);
@@ -198,26 +261,31 @@
         grid.innerHTML = "";
         maps.forEach(m => {
             const file = m.toLowerCase().replace(/\s+/g, '');
-            grid.innerHTML += `<div class="map-card" onclick="loadMap('${m}')"><img src="assets/icons/${file}.png" onerror="this.src='https://via.placeholder.com/200x100?text=${m}'"><div style="padding:10px;text-align:center;">${m}</div></div>`;
+            grid.innerHTML += `<div class="map-card" onclick="loadMap('${m}')"><img src="assets/icons/${file}.png" onerror="this.src='https://via.placeholder.com/240x140?text=${m}'"><div style="padding:15px;text-align:center;font-weight:bold;">${m}</div></div>`;
         });
+    }
+
+    function toggleSide() {
+        currentSide = (currentSide === "T") ? "CT" : "T";
+        document.getElementById('side-label').innerText = currentSide;
+        renderSpots();
+        if(lineLayer) lineLayer.clearLayers();
+        closeInfo();
     }
 
     function loadMap(name) {
         currentMapName = name;
         const file = name.toLowerCase().replace(/\s+/g, '');
-        const imgUrl = `maps/${file}.png`;
         document.getElementById('homeView').style.display = 'none';
         document.getElementById('back-btn').style.display = 'block';
+        document.getElementById('side-control').style.display = 'flex';
         if(mapLayer) map.removeLayer(mapLayer);
         const img = new Image();
-        img.src = imgUrl;
+        img.src = `maps/${file}.png`;
         img.onload = function() {
-            const h = this.height;
-            const w = this.width;
-            const bounds = [[0, 0], [h, w]];
-            mapLayer = L.imageOverlay(imgUrl, bounds).addTo(map);
-            map.setMaxBounds(bounds); // BILD-GRENZEN FIXIEREN
-            map.fitBounds(bounds);
+            const bounds = [[0, 0], [this.height, this.width]];
+            mapLayer = L.imageOverlay(img.src, bounds).addTo(map);
+            map.setMaxBounds(bounds); map.fitBounds(bounds);
             renderSpots();
         };
     }
@@ -225,9 +293,11 @@
     function showHome() {
         document.getElementById('homeView').style.display = 'block';
         document.getElementById('back-btn').style.display = 'none';
+        document.getElementById('side-control').style.display = 'none';
         currentMapName = "";
         if(lineLayer) lineLayer.clearLayers();
     }
+
     function login() { if(prompt("Code:") === "1210") { isAdmin = true; document.getElementById('admin-panel').style.display = 'block'; } }
 
     map.on('click', function(e) {
@@ -239,11 +309,14 @@
             L.circleMarker(pos, {color: 'white', radius: 5}).addTo(map);
         } else {
             const spot = {
-                map: currentMapName, type: document.getElementById('tool-type').value,
+                map: currentMapName,
+                side: document.getElementById('tool-side').value,
+                type: document.getElementById('tool-type').value,
                 title: document.getElementById('tool-title').value || "Spot",
                 setpos: document.getElementById('tool-setpos').value,
                 img: document.getElementById('tool-img').value || "",
                 img2: document.getElementById('tool-img2').value || "",
+                Beschreibung: document.getElementById('tool-desc').value || "",
                 label: document.getElementById('tool-throw').value,
                 start: tempStart, end: pos
             };
@@ -257,12 +330,11 @@
 
     function renderSpots() {
         lineLayer.clearLayers(); markerLayer.clearLayers();
-        allSpots.filter(s => s.map === currentMapName).forEach(spot => {
+        allSpots.filter(s => s.map === currentMapName && s.side === currentSide).forEach(spot => {
             const icon = L.divIcon({
                 className: 'util-marker-container',
                 html: `<img src="assets/utils/${spot.type}.png" class="util-marker-img" style="border-color:${colors[spot.type]}">`,
-                iconSize: [32, 32], 
-                iconAnchor: [16, 16] // FIXIERT DEN ANKER IN DER MITTE
+                iconSize: [42, 42], iconAnchor: [21, 21]
             });
             const marker = L.marker(spot.start, { icon: icon, utilType: spot.type });
             marker.on('click', (e) => { L.DomEvent.stopPropagation(e); showInfo(spot); });
@@ -274,25 +346,31 @@
         activeSpotType = spot.type;
         lineLayer.clearLayers();
         L.polyline([spot.start, spot.end], { color: colors[spot.type], weight: 4, dashArray: '10, 10', className: 'animated-line' }).addTo(lineLayer);
+        
         document.getElementById('pop-title').innerText = spot.title;
         document.getElementById('pop-label').innerText = spot.label;
+        document.getElementById('pop-desc').innerText = spot.Beschreibung || "";
+        
         const popImg1 = document.getElementById('pop-img');
         const popImg2 = document.getElementById('pop-img2');
+        
         if(spot.img && spot.img.trim() !== "") {
-            let img1 = spot.img.trim(); if(!img1.toLowerCase().endsWith(".png")) img1 += ".png";
-            popImg1.src = "img/" + img1; popImg1.style.display = "block";
+            let i1 = spot.img.trim(); if(!i1.toLowerCase().endsWith(".png")) i1 += ".png";
+            popImg1.src = "img/" + i1; popImg1.style.display = "block";
         } else { handleImageError(popImg1); }
+        
         if(spot.img2 && spot.img2.trim() !== "") {
-            let img2 = spot.img2.trim(); if(!img2.toLowerCase().endsWith(".png")) img2 += ".png";
-            popImg2.src = "img/" + img2; popImg2.style.display = "block";
+            let i2 = spot.img2.trim(); if(!i2.toLowerCase().endsWith(".png")) i2 += ".png";
+            popImg2.src = "img/" + i2; popImg2.style.display = "block";
         } else { popImg2.style.display = "none"; }
+        
         window.activeSetpos = spot.setpos;
         document.getElementById('info-box').style.display = 'block';
     }
 
     function handleImageError(element) {
         element.src = `assets/utils/${activeSpotType}.png`;
-        element.style.width = "100px"; element.style.margin = "20px auto";
+        element.style.width = "80px"; element.style.margin = "20px auto";
     }
 
     function closeInfo() { document.getElementById('info-box').style.display = 'none'; lineLayer.clearLayers(); }
@@ -303,36 +381,44 @@
         document.getElementById('export-modal').style.display = 'block';
     }
 
-    // DATENBANK (allSpots Array wie gehabt hier einfügen)
-    let allSpots = [{
+    // --- DATENBANK ---
+    // Wichtig: Bestehende Daten müssen manuell um "side": "T" oder "CT" ergänzt werden!
+    let allSpots = [
+		{
         "map": "Cache",
+		"side" : "T",
         "type": "smoke",
         "title": "A Cross Waterfall",
         "setpos": "setpos 1315.968750 1587.960815 1768.000000;setang -33.090771 -167.674728 0.000000",
         "img": "cache_A_cross_waterfall",
 		"img2": "",
+		"Beschreibung": "TBD",
         "label": "Left- and rightclick jump-throw",
         "start": [1473.6, 1231.4],
         "end": [1392.1, 721.3]
       },
 	  {
         "map": "Cache",
+		"side" : "T",
         "type": "smoke",
         "title": "A Backsite",
         "setpos": "setpos 1315.968750 1587.960815 1768.000000;setang -33.090771 -167.674728 0.000000",
         "img": "cache_A_backsite",
 		"img2": "",
+		"Beschreibung": "TBD",
         "label": "Left- and rightclick W-jump-throw",
         "start": [1473.6, 1231.4], // Gleicher Startpunkt zum Testen des Clusters!
         "end": [1437.1, 618.4]
       },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "flash",
 		"title": "Popflash A",
 		"setpos": "setpos 1315.969482 1052.109375 1700.089722;setang -14.670122 145.052795 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  1348.1878858951316,
@@ -345,11 +431,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "molly",
 		"title": "Whitebox Molly",
 		"setpos": "setpos 1249.163574 558.031250 1672.105469;setang 5.964442 -174.165634 0.000000",
 		"img": "whitebox_molly",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1080.6462977018168,
@@ -362,11 +450,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "smoke",
 		"title": "Heaven Smoke",
 		"setpos": "setpos 530.394470 -1449.971558 1712.000000;setang -32.191555 145.135620 0.000000",
 		"img": "cache_B_heaven",
 		"img2": "cache_B_heaven_setup",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  328.42756976142346,
@@ -379,11 +469,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "molly",
 		"title": "Molly Close Ecke B Spot",
 		"setpos": "setpos 579.211548 -1449.968750 1676.265625;setang -34.305405 138.768600 0.000000",
 		"img": "cache_B_molly_close",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  324.9840512304732,
@@ -396,11 +488,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "molly",
 		"title": "Molly Backsite B",
 		"setpos": "setpos 579.211548 -1449.968750 1676.265625;setang -39.202423 175.988205 0.000000",
 		"img": "cache_B_molly_backsite",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  324.45611275131944,
@@ -413,11 +507,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "flash",
 		"title": "Popflash B site",
 		"setpos": "setpos 823.965698 -1449.940918 1712.000000;setang 3.029478 158.610901 0.000000",
 		"img": "cache_B_popflash",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Left- and rightclick W-jump-throw",
 		"start": [
 		  322.55525253651,
@@ -430,11 +526,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "smoke",
 		"title": "B Tree (lower) smoke",
 		"setpos": "setpos 579.209045 -1449.940430 1676.265625;setang -4.190580 151.287338 0.000000",
 		"img": "cache_B_tree_smoke",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Left- and rightclick jump-throw",
 		"start": [
 		  328.7129163963449,
@@ -447,11 +545,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "molly",
 		"title": "Headshot Molly",
 		"setpos": "setpos 823.942139 -1449.968750 1712.000000;setang -23.417480 167.946335 0.000000",
 		"img": "cache_b_headshot_molly",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  326.2233835425378,
@@ -464,11 +564,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "flash",
 		"title": "Popflash A Main",
 		"setpos": "setpos 1315.968750 1054.244263 1700.648193;setang -14.628532 145.365540 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1344.2981385076935,
@@ -481,11 +583,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "smoke",
 		"title": "Mid Smoke",
 		"setpos": "setpos 1249.132324 558.057495 1672.103149;setang -61.631470 -161.614471 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  1085.7264489210659,
@@ -498,11 +602,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "he",
 		"title": "Vent HE",
 		"setpos": "setpos -119.808533 550.952271 1684.614990;setang -14.732475 -44.018330 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1079.4374026920775,
@@ -515,11 +621,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "smoke",
 		"title": "CT Spawn Mid Smoke",
 		"setpos": "setpos -1742.968750 303.505035 1678.000000;setang -30.637463 -1.219335 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  1003.1319610707129,
@@ -532,11 +640,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "flash",
 		"title": "Popflash in A Main",
 		"setpos": "setpos -448.732483 1437.941528 1752.000000;setang -15.946381 18.768297 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1450.1710352402597,
@@ -549,11 +659,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "molly",
 		"title": "Boost Molly",
 		"setpos": "setpos -275.531250 -93.569763 1728.000000;setang 2.092812 30.865225 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  843.3603893554459,
@@ -566,11 +678,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "he",
 		"title": "B Retake HE Default",
 		"setpos": "setpos -544.213989 -504.976379 1800.000000;setang -2.850890 -65.224869 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  673.4645412618722,
@@ -583,11 +697,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "he",
 		"title": "B Retake HE Backsite",
 		"setpos": "setpos -562.079224 -529.929932 1800.000000;setang -10.133728 -54.776119 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  679.2537386738617,
@@ -600,11 +716,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "molly",
 		"title": "B Retake Molly (Headshot + default)",
 		"setpos": "setpos -545.122253 -504.864990 1800.000000;setang 0.644018 -65.310799 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  682.2206172253296,
@@ -617,11 +735,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "flash",
 		"title": "B Retake Flash Heaven",
 		"setpos": "setpos -466.043518 -379.968750 1676.031250;setang -11.154454 -132.753357 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  768.6649056304282,
@@ -634,11 +754,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "smoke",
 		"title": "Mid Roof Wall",
 		"setpos": "setpos 2645.554199 104.968750 1674.468750;setang -10.463708 -177.872986 0.000000",
 		"img": "cache_Mid_roof_wall",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  914.1266057475884,
@@ -651,11 +773,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "T",
 		"type": "smoke",
 		"title": "Mid Wall right part",
 		"setpos": "setpos 2645.507568 104.968750 1674.468750;setang -49.598007 175.395401 0.000000",
 		"img": "cache_Mid_wall",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftklick jump-throw",
 		"start": [
 		  919.7288414116242,
@@ -668,11 +792,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "smoke",
 		"title": "A Main smoke",
 		"setpos": "setpos -916.031250 1089.506348 1751.368164;setang -21.408552 22.411922 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1285.5771549580093,
@@ -685,11 +811,13 @@
 	  },
 	  {
 		"map": "Cache",
+		"side" : "CT",
 		"type": "he",
 		"title": "Boost HE (crouch)",
 		"setpos": "setpos -57.060425 454.599945 1727.735962;setang -19.608761 3.708137 0.000000",
 		"img": "",
 		"img2": "",
+		"Beschreibung": "TBD",
 		"label": "Leftclick throw",
 		"start": [
 		  1048.6557904884953,
@@ -699,8 +827,27 @@
 		  1090.021298393248,
 		  1084.3712471172012
 		]
+	  },
+	  {
+		"map": "Cache",
+		"side": "T",
+		"type": "smoke",
+		"title": "A Rush Cross Smoke",
+		"setpos": "",
+		"img": "",
+		"img2": "",
+		"Beschreibung": "Erstes Bild: Startposition\nZweites Bild: Endposition, hier leftclick jump throw im Rennen ausführen.",
+		"label": "Leftclick jump & run throw",
+		"start": [
+		  1063.7351615672708,
+		  1307.5636242942776
+		],
+		"end": [
+		  1399.736142072399,
+		  697.1886373798587
+		]
 	  }
-  ]; // Hier deine Spots einfügen
+    ];
 
     buildMenu();
 </script>
